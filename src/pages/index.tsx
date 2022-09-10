@@ -52,14 +52,37 @@ const calculateWeekendsBetweenDates = (
     .length
 }
 
-const calculateWorkdayBetweenDatesWithoutWeekends = (
+const calculateDaysBetweenDates = (
+  dateStart: dayjs.Dayjs,
+  dateEnd: dayjs.Dayjs
+): number => {
+  return dateEnd.diff(dateStart, "day")
+}
+
+const calculateWorkdaysBetweenDates = (
   dateStart: dayjs.Dayjs,
   dateEnd: dayjs.Dayjs
 ): number => {
   return (
-    dateEnd.diff(dateStart, "day") -
+    calculateDaysBetweenDates(dateStart, dateEnd) -
     calculateWeekendsBetweenDates(dateStart, dateEnd)
   )
+}
+
+const calculateDaysAhead = (today: dayjs.Dayjs, payday: number): number => {
+  const currentMonthPayday = today.date(payday)
+  const nextMonthPayday = today.month(today.month() + 1).date(payday)
+
+  switch (true) {
+    case today.isSame(currentMonthPayday):
+      return 0
+    case today.isBefore(currentMonthPayday):
+      return calculateDaysBetweenDates(today, currentMonthPayday)
+    case today.isAfter(currentMonthPayday):
+      return calculateDaysBetweenDates(today, nextMonthPayday)
+    default:
+      return NaN
+  }
 }
 
 const calculateWorkdaysAhead = (today: dayjs.Dayjs, payday: number): number => {
@@ -70,12 +93,9 @@ const calculateWorkdaysAhead = (today: dayjs.Dayjs, payday: number): number => {
     case today.isSame(currentMonthPayday):
       return 0
     case today.isBefore(currentMonthPayday):
-      return calculateWorkdayBetweenDatesWithoutWeekends(
-        today,
-        currentMonthPayday
-      )
+      return calculateWorkdaysBetweenDates(today, currentMonthPayday)
     case today.isAfter(currentMonthPayday):
-      return calculateWorkdayBetweenDatesWithoutWeekends(today, nextMonthPayday)
+      return calculateWorkdaysBetweenDates(today, nextMonthPayday)
     default:
       return NaN
   }
@@ -126,7 +146,8 @@ const calculateStats = (
   today: dayjs.Dayjs,
   payday: number
 ): {
-  workdayAhead: number
+  daysAhead: number
+  workdaysAhead: number
   weekendsAhead: number
   isPaydayOnNextWeek: boolean
   isPaydayOnThisWeek: boolean
@@ -134,8 +155,10 @@ const calculateStats = (
   paydayOrigin: string
   paydayActual: string
 } => {
+  // TODO: need to account for payday date 31 but current month doesn't have date 31
   return {
-    workdayAhead: calculateWorkdaysAhead(today, payday),
+    daysAhead: calculateDaysAhead(today, payday),
+    workdaysAhead: calculateWorkdaysAhead(today, payday),
     weekendsAhead: calculateWeekendsAhead(today, payday),
     isPaydayOnNextWeek: isPaydayOnNextWeek(today, payday),
     isPaydayOnThisWeek: isPaydayOnThisWeek(today, payday),
@@ -146,11 +169,7 @@ const calculateStats = (
 }
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="flex h-screen w-screen items-center justify-center">
-      {children}
-    </div>
-  )
+  return <div className="p-8">{children}</div>
 }
 
 const Message: React.FC<{ workday: number }> = ({ workday }) => {
@@ -162,28 +181,100 @@ const Message: React.FC<{ workday: number }> = ({ workday }) => {
         </div>
       )
     case workday <= 0:
-      return <div>Gajian</div>
+      return <div className="text-teal-700 font-bold">Gajian</div>
     default:
       return <div>{errorString()}</div>
   }
 }
 
-const CountdownWidget: React.FC<{ payday: number }> = ({ payday }) => {
+const StatsWidget: React.FC<{ payday: number }> = ({ payday }) => {
   const today = React.useMemo(() => dayjs(), [])
   const stats = calculateStats(today, payday)
   return (
-    <div className="text-center">
-      <div className="text-xl">
-        {!Number.isNaN(stats.workdayAhead) && (
-          <Message workday={stats.workdayAhead} />
-        )}
+    <div>
+      <div>{<Message workday={stats.workdaysAhead} />}</div>
+    </div>
+  )
+}
+
+type UninitializedState = null
+
+type InitializedState = {
+  payday: number
+}
+
+type State = UninitializedState | InitializedState
+
+type StateManager = {
+  state: State
+  isInitialized: () => boolean
+  setPayday: (payday: number) => void
+  getPayday: () => number
+}
+
+type StateManagerParams = {
+  payday?: number
+}
+
+const useStateManager = ({ payday }: StateManagerParams = {}): StateManager => {
+  const initialState = payday ? { payday } : null
+  const [state, setState] = React.useState<State>(initialState)
+  const isInitialized = () => {
+    // TODO: better checking
+    return state !== null
+  }
+  const setPayday = (payday: number) => {
+    setState({
+      ...state,
+      payday,
+    })
+  }
+  const getPayday = () => {
+    if (state && state.payday) {
+      return state.payday
+    } else {
+      throw Error(
+        `Can't get payday where it is supposed to has been initialized, typescript sucks!!!`
+      )
+    }
+  }
+  return {
+    state,
+    isInitialized,
+    setPayday,
+    getPayday,
+  }
+}
+
+const InputWidget: React.FC<{
+  payday?: number
+  setPayday: StateManager["setPayday"]
+}> = ({ payday, setPayday }) => {
+  return (
+    <div className="flex flex-row items-center justify-start">
+      <div>Tanggal Gajian:</div>
+      <div>
+        <select
+          value={payday}
+          onChange={(e) => {
+            const newValue = Number(e.target.value)
+            if (!newValue || newValue < 1 || newValue > 31) return
+            setPayday(newValue)
+          }}
+        >
+          {range(31).map((date) => (
+            <option key={date} value={date}>
+              {date}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   )
 }
 
 const Home: NextPage = () => {
-  const payday = 25
+  const stateManager = useStateManager()
   return (
     <>
       <Head>
@@ -192,7 +283,15 @@ const Home: NextPage = () => {
       </Head>
 
       <Layout>
-        <CountdownWidget payday={payday} />
+        <InputWidget
+          payday={
+            stateManager.isInitialized() ? stateManager.getPayday() : undefined
+          }
+          setPayday={stateManager.setPayday}
+        />
+        {stateManager.isInitialized() && (
+          <StatsWidget payday={stateManager.getPayday()} />
+        )}
       </Layout>
     </>
   )
