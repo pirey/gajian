@@ -2,6 +2,9 @@ import type { NextPage } from "next"
 import Head from "next/head"
 import React from "react"
 import dayjs from "dayjs"
+import weekOfYear from "dayjs/plugin/weekOfYear"
+
+dayjs.extend(weekOfYear)
 
 enum DAY {
   Monday = 1,
@@ -13,21 +16,21 @@ enum DAY {
   Sunday = 0,
 }
 
-const dayStringByIndex = (day: DAY) => {
+const dayStringFromIndex = (dayIndex: DAY) => {
   const dayMap = {
     [DAY.Monday]: "Senin",
     [DAY.Tuesday]: "Selasa",
     [DAY.Wednesday]: "Rabu",
     [DAY.Thursday]: "Kamis",
-    [DAY.Friday]: "Jum'at",
+    [DAY.Friday]: "Jumat",
     [DAY.Saturday]: "Sabtu",
     [DAY.Sunday]: "Minggu",
   }
-  return dayMap[day]
+  return dayMap[dayIndex]
 }
 
-const dayStringByDate = (date: dayjs.Dayjs) => {
-  return dayStringByIndex(date.day())
+const dayStringFromDate = (date: dayjs.Dayjs) => {
+  return dayStringFromIndex(date.day())
 }
 
 const errorString = (message?: string): string =>
@@ -118,13 +121,33 @@ const calculateWeekendsAhead = (today: dayjs.Dayjs, payday: number): number => {
 }
 
 const isPaydayOnThisWeek = (today: dayjs.Dayjs, payday: number): boolean => {
-  const todayWeekday = today.day()
-  const paydayWeekday = today.date(payday).day()
-  return todayWeekday <= paydayWeekday
+  const paydayDate = today.date(payday)
+
+  const onThisWeek =
+    today.isBefore(paydayDate) && today.week() === paydayDate.week()
+
+  const onSundayNextWeek =
+    today.isBefore(paydayDate) &&
+    today.week() + 1 === paydayDate.week() &&
+    paydayDate.day() === DAY.Sunday
+
+  return onThisWeek || onSundayNextWeek
 }
 
 const isPaydayOnNextWeek = (today: dayjs.Dayjs, payday: number): boolean => {
-  return !isPaydayOnThisWeek(today, payday)
+  const paydayDate = today.date(payday)
+
+  const onNextWeek =
+    today.isBefore(paydayDate) &&
+    today.week() + 1 === paydayDate.week() &&
+    paydayDate.day() !== DAY.Sunday
+
+  const onSundayTwoWeeksAhead =
+    today.isBefore(paydayDate) &&
+    today.week() + 2 == paydayDate.week() &&
+    paydayDate.day() === DAY.Sunday
+
+  return onNextWeek || onSundayTwoWeeksAhead
 }
 
 const calculatePreviousWeekdayDate = (date: dayjs.Dayjs): dayjs.Dayjs => {
@@ -138,8 +161,19 @@ const calculatePreviousWeekdayDate = (date: dayjs.Dayjs): dayjs.Dayjs => {
   }
 }
 
-const calculatePaydayActual = (payday: dayjs.Dayjs) => {
+const calculateActualPayday = (payday: dayjs.Dayjs): dayjs.Dayjs => {
   return isWeekendDay(payday) ? calculatePreviousWeekdayDate(payday) : payday
+}
+
+const isDateBetween = (
+  dateStart: dayjs.Dayjs,
+  dateEnd: dayjs.Dayjs,
+  date: dayjs.Dayjs
+): boolean => {
+  return (
+    (date.isSame(dateStart) || date.isAfter(dateStart)) &&
+    (date.isSame(dateEnd) || date.isBefore(dateEnd))
+  )
 }
 
 const calculateStats = (
@@ -152,10 +186,17 @@ const calculateStats = (
   isPaydayOnNextWeek: boolean
   isPaydayOnThisWeek: boolean
   isPaydayOnWeekend: boolean
-  paydayOrigin: string
-  paydayActual: string
+  isPayday: boolean
+  isWeekendToday: boolean
+  paydayOriginDate: dayjs.Dayjs
+  paydayActualDate: dayjs.Dayjs
+  paydayOriginString: string
+  paydayActualString: string
 } => {
   // TODO: need to account for payday date 31 but current month doesn't have date 31
+  const paydayOriginDate = today.date(payday)
+  const paydayActualDate = calculateActualPayday(today.date(payday))
+  const isPayday = isDateBetween(paydayActualDate, paydayOriginDate, today)
   return {
     daysAhead: calculateDaysAhead(today, payday),
     workdaysAhead: calculateWorkdaysAhead(today, payday),
@@ -163,36 +204,96 @@ const calculateStats = (
     isPaydayOnNextWeek: isPaydayOnNextWeek(today, payday),
     isPaydayOnThisWeek: isPaydayOnThisWeek(today, payday),
     isPaydayOnWeekend: isWeekendDay(today.date(payday)),
-    paydayOrigin: dayStringByIndex(today.date(payday).day()),
-    paydayActual: dayStringByDate(calculatePaydayActual(today.date(payday))),
+    isPayday,
+    isWeekendToday: isWeekendDay(today),
+    paydayOriginDate,
+    paydayActualDate,
+    paydayOriginString: dayStringFromIndex(today.date(payday).day()),
+    paydayActualString: dayStringFromDate(
+      calculateActualPayday(today.date(payday))
+    ),
   }
 }
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <div className="p-8">{children}</div>
+  return (
+    <div className="flex flex-col w-screen h-screen items-center justify-center">
+      {children}
+    </div>
+  )
 }
 
-const Message: React.FC<{ workday: number }> = ({ workday }) => {
-  switch (true) {
-    case workday > 0:
-      return (
-        <div>
-          Masih perlu kerja <strong>{workday}</strong> hari lagi!
-        </div>
-      )
-    case workday <= 0:
-      return <div className="text-teal-700 font-bold">Gajian</div>
-    default:
-      return <div>{errorString()}</div>
-  }
-}
-
-const StatsWidget: React.FC<{ payday: number }> = ({ payday }) => {
+const StatsWidget: React.FC<{ payday: number; debug: boolean }> = ({
+  payday,
+  debug = false,
+}) => {
+  // const today = React.useMemo(() => dayjs().date(5), [])
   const today = React.useMemo(() => dayjs(), [])
   const stats = calculateStats(today, payday)
+
+  const message = (() => {
+    switch (true) {
+      case stats.isPayday: {
+        const isAdvanced = !stats.isWeekendToday && stats.paydayActualString !== stats.paydayOriginString
+        return (
+          <div className="text-2xl text-teal-700 font-extrabold uppercase">
+            {isAdvanced && (
+              <>
+                Karena {stats.paydayOriginString} hari libur, jadi sekarang
+                sudah <div className="animate-gajian">Gajian</div>
+              </>
+            )}
+            {!isAdvanced && <div className="animate-gajian">Gajian</div>}
+          </div>
+        )
+      }
+      case stats.isPaydayOnThisWeek: {
+        const isTomorrow = stats.daysAhead === 1
+        const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
+        return (
+          <div className="text-2xl text-teal-700 font-extrabold uppercase">
+            {isAdvanced &&
+              `Karena ${stats.paydayOriginString} hari libur, gajian dimajukan besok ${isTomorrow ? "" : stats.paydayActualString}`}
+            {!isAdvanced &&
+              `Besok ${isTomorrow ? "" : stats.paydayActualString} gajian`}
+          </div>
+        )
+      }
+      case stats.isPaydayOnNextWeek: {
+        const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
+        return (
+          <div className="text-2xl text-teal-700 font-extrabold uppercase">
+            {isAdvanced &&
+              `Karena ${stats.paydayOriginString} hari libur, gajian dimajukan hari ${stats.paydayActualString} di minggu depan!`}
+            {!isAdvanced && `${stats.paydayActualString} depan gajian`}
+          </div>
+        )
+      }
+      case stats.workdaysAhead > 0:
+        return (
+          <div className="text-2xl uppercase font-extrabold">
+            Gajian masih <strong>{stats.daysAhead}</strong> hari,{" "}
+            {stats.daysAhead !== stats.workdaysAhead &&
+              `Tapi cuma perlu kerja ${stats.workdaysAhead} hari lagi!`}
+          </div>
+        )
+      default:
+        return (
+          <div className="text-2xl text-red-600 font-extrabold">
+            {errorString()}
+          </div>
+        )
+    }
+  })()
   return (
-    <div>
-      <div>{<Message workday={stats.workdaysAhead} />}</div>
+    <div className="text-center pt-8">
+      <div>
+        Sekarang hari <strong>{dayStringFromDate(today)}</strong> tanggal <strong>{today.date()}</strong>
+      </div>
+      <div className="p-8">{message}</div>
+      {debug && (
+        <pre className="text-left mt-12 p-8">DEBUG<br />{JSON.stringify(stats, null, 4)}</pre>
+      )}
     </div>
   )
 }
@@ -252,9 +353,10 @@ const InputWidget: React.FC<{
 }> = ({ payday, setPayday }) => {
   return (
     <div className="flex flex-row items-center justify-start">
-      <div>Tanggal Gajian:</div>
-      <div>
+      <div className="uppercase font-extrabold text-2xl">Tanggal Gajian:</div>
+      <div className="border-2 rounded radius ml-4 w-16">
         <select
+          className="w-full text-center font-bold"
           value={payday}
           onChange={(e) => {
             const newValue = Number(e.target.value)
@@ -275,6 +377,13 @@ const InputWidget: React.FC<{
 
 const Home: NextPage = () => {
   const stateManager = useStateManager()
+  const [debug, setDebug] = React.useState(false)
+
+  React.useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search)
+    setDebug(queryParams.has("debug"))
+  }, [])
+
   return (
     <>
       <Head>
@@ -290,7 +399,7 @@ const Home: NextPage = () => {
           setPayday={stateManager.setPayday}
         />
         {stateManager.isInitialized() && (
-          <StatsWidget payday={stateManager.getPayday()} />
+          <StatsWidget payday={stateManager.getPayday()} debug={debug} />
         )}
       </Layout>
     </>
