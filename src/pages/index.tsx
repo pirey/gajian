@@ -216,25 +216,22 @@ const calculateStats = (
 }
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="flex flex-col w-screen h-screen items-center justify-center">
-      {children}
-    </div>
-  )
+  return <div className="">{children}</div>
 }
 
-const StatsWidget: React.FC<{ payday: number; debug: boolean }> = ({
-  payday,
-  debug = false,
-}) => {
-  // const today = React.useMemo(() => dayjs().date(5), [])
-  const today = React.useMemo(() => dayjs(), [])
+const StatsWidget: React.FC<{
+  today: dayjs.Dayjs
+  payday: number
+  debug: boolean
+}> = ({ today, payday, debug = false }) => {
   const stats = calculateStats(today, payday)
 
   const message = (() => {
     switch (true) {
       case stats.isPayday: {
-        const isAdvanced = !stats.isWeekendToday && stats.paydayActualString !== stats.paydayOriginString
+        const isAdvanced =
+          !stats.isWeekendToday &&
+          stats.paydayActualString !== stats.paydayOriginString
         return (
           <div className="text-2xl text-teal-700 font-extrabold uppercase">
             {isAdvanced && (
@@ -253,7 +250,11 @@ const StatsWidget: React.FC<{ payday: number; debug: boolean }> = ({
         return (
           <div className="text-2xl text-teal-700 font-extrabold uppercase">
             {isAdvanced &&
-              `Karena ${stats.paydayOriginString} hari libur, gajian dimajukan besok ${isTomorrow ? "" : stats.paydayActualString}`}
+              `Karena ${
+                stats.paydayOriginString
+              } hari libur, gajian dimajukan besok ${
+                isTomorrow ? "" : stats.paydayActualString
+              }`}
             {!isAdvanced &&
               `Besok ${isTomorrow ? "" : stats.paydayActualString} gajian`}
           </div>
@@ -286,13 +287,14 @@ const StatsWidget: React.FC<{ payday: number; debug: boolean }> = ({
     }
   })()
   return (
-    <div className="text-center pt-8">
+    <div className="p-8 flex flex-col items-center justify-center">
       <div>
-        Sekarang hari <strong>{dayStringFromDate(today)}</strong> tanggal <strong>{today.date()}</strong>
+        Sekarang hari <strong>{dayStringFromDate(today)}</strong> tanggal{" "}
+        <strong>{today.date()}</strong>
       </div>
-      <div className="p-8">{message}</div>
+      <div className="text-center">{message}</div>
       {debug && (
-        <pre className="text-left mt-12 p-8">DEBUG<br />{JSON.stringify(stats, null, 4)}</pre>
+        <pre className="text-left mt-12">{JSON.stringify(stats, null, 4)}</pre>
       )}
     </div>
   )
@@ -308,42 +310,31 @@ type State = UninitializedState | InitializedState
 
 type StateManager = {
   state: State
+  setState: React.Dispatch<React.SetStateAction<State>>
   isInitialized: () => boolean
   setPayday: (payday: number) => void
-  getPayday: () => number
 }
 
-type StateManagerParams = {
-  payday?: number
-}
-
-const useStateManager = ({ payday }: StateManagerParams = {}): StateManager => {
-  const initialState = payday ? { payday } : null
+const useStateManager = (initialState: State): StateManager => {
   const [state, setState] = React.useState<State>(initialState)
   const isInitialized = () => {
-    // TODO: better checking
     return state !== null
   }
   const setPayday = (payday: number) => {
-    setState({
-      ...state,
-      payday,
-    })
+    const newState = { ...state, payday }
+    setState(newState)
+    window.localStorage.setItem(STATE_KEY, JSON.stringify(newState))
   }
-  const getPayday = () => {
-    if (state && state.payday) {
-      return state.payday
-    } else {
-      throw Error(
-        `Can't get payday where it is supposed to has been initialized, typescript sucks!!!`
-      )
-    }
-  }
+
+  React.useEffect(() => {
+    setState(initialState)
+  }, [initialState])
+
   return {
     state,
+    setState,
     isInitialized,
     setPayday,
-    getPayday,
   }
 }
 
@@ -352,37 +343,61 @@ const InputWidget: React.FC<{
   setPayday: StateManager["setPayday"]
 }> = ({ payday, setPayday }) => {
   return (
-    <div className="flex flex-row items-center justify-start">
-      <div className="uppercase font-extrabold text-2xl">Tanggal Gajian:</div>
-      <div className="border-2 rounded radius ml-4 w-16">
-        <select
-          className="w-full text-center font-bold"
-          value={payday}
-          onChange={(e) => {
-            const newValue = Number(e.target.value)
-            if (!newValue || newValue < 1 || newValue > 31) return
-            setPayday(newValue)
-          }}
-        >
-          {range(31).map((date) => (
-            <option key={date} value={date}>
-              {date}
-            </option>
-          ))}
-        </select>
+    <div className="flex flex-col justify-center items-center bg-teal-600 p-8">
+      <div className="flex flex-row items-center justify-start">
+        <div className="uppercase font-extrabold text-2xl text-white">Tanggal Gajian:</div>
+        <div className="border-2 rounded radius ml-4 w-16">
+          <select
+            className="w-full text-center font-bold"
+            value={payday}
+            onChange={(e) => {
+              const newValue = Number(e.target.value)
+              if (!newValue || newValue < 1 || newValue > 31) return
+              setPayday(newValue)
+            }}
+          >
+            {range(31).map((date) => (
+              <option key={date} value={date}>
+                {date}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   )
 }
 
-const Home: NextPage = () => {
-  const stateManager = useStateManager()
-  const [debug, setDebug] = React.useState(false)
+const STATE_KEY = "STATE"
 
+const useLoadedState = () => {
+  const [state, setState] = React.useState<State>(null)
+  React.useEffect(() => {
+    try {
+      const retrieved = window.localStorage.getItem(STATE_KEY)
+      setState(retrieved ? JSON.parse(retrieved) : null)
+    } catch (error) {
+      setState(null)
+    }
+  }, [])
+  return state
+}
+
+const useDebug = () => {
+  const [debug, setDebug] = React.useState(false)
   React.useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search)
     setDebug(queryParams.has("debug"))
   }, [])
+  return debug
+}
+
+const Home: NextPage = () => {
+  // const today = React.useMemo(() => dayjs().date(5), [])
+  const today = React.useMemo(() => dayjs(), [])
+  const state = useLoadedState()
+  const stateManager = useStateManager(state)
+  const debug = useDebug()
 
   return (
     <>
@@ -393,13 +408,15 @@ const Home: NextPage = () => {
 
       <Layout>
         <InputWidget
-          payday={
-            stateManager.isInitialized() ? stateManager.getPayday() : undefined
-          }
+          payday={stateManager.state?.payday}
           setPayday={stateManager.setPayday}
         />
-        {stateManager.isInitialized() && (
-          <StatsWidget payday={stateManager.getPayday()} debug={debug} />
+        {stateManager.state?.payday && (
+          <StatsWidget
+            today={today}
+            payday={stateManager.state.payday}
+            debug={debug}
+          />
         )}
       </Layout>
     </>
