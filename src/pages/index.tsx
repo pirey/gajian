@@ -475,16 +475,15 @@ const Header: React.FC<{
   openSetting: () => void
 }> = ({ isStateInitialized, openSetting }) => {
   return (
-    <div className="flex flex-row items-center bg-teal-600 px-8 py-3">
-      <h1 className="text-2xl text-white font-bold cursor-pointer uppercase">
+    <div className="flex flex-row items-center justify-between px-8 py-6">
+      <h1 className="text-2xl font-extrabold cursor-pointer uppercase">
         Kapan Gajian?
       </h1>
-      <div className="px-4" />
-      <GithubButton className="text-white" />
-      <div className="px-2" />
-      {isStateInitialized && (
-        <SettingButton className="text-white" onClick={openSetting} />
-      )}
+      <div className="flex flex-row items-center justify-between">
+        <GithubButton />
+        <div className="px-4" />
+        {isStateInitialized && <SettingButton onClick={openSetting} />}
+      </div>
     </div>
   )
 }
