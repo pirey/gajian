@@ -239,7 +239,7 @@ const StatsWidget: React.FC<{
           stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-full py-2 px-16 font-extrabold uppercase animate-gajian">
+          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-md py-2 px-16 font-extrabold uppercase animate-gajian">
             {showAltMessage ? (
               <>
                 Karena {stats.paydayOriginString} hari libur, jadi sekarang
@@ -256,7 +256,7 @@ const StatsWidget: React.FC<{
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-full py-2 px-16  font-extrabold uppercase">
+          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-md py-2 px-16  font-extrabold uppercase">
             {showAltMessage
               ? `Karena ${
                   stats.paydayOriginString
@@ -271,7 +271,7 @@ const StatsWidget: React.FC<{
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-full py-2 px-16  font-extrabold uppercase">
+          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-md py-2 px-16  font-extrabold uppercase">
             {showAltMessage &&
               `Karena ${stats.paydayOriginString} hari libur, gajian dimajukan hari ${stats.paydayActualString} di minggu depan!`}
             {!showAltMessage && `${stats.paydayActualString} depan gajian`}
@@ -472,15 +472,35 @@ const SettingButton: React.FC<{ className?: string; onClick: () => void }> = ({
   )
 }
 
+const Logo = () => {
+  return (
+    <h1 className="text-2xl font-extrabold cursor-pointer uppercase relative">
+      <span className="relative z-10">Kapan</span>{" "}
+      <span className="relative z-10 text-white">Gajian</span>
+      <div
+        className="absolute border-b-teal-600"
+        style={{
+          height: 0,
+          position: "absolute",
+          width: "150px",
+          borderBottomWidth: "48px",
+          borderLeft: "22px solid transparent",
+          top: "-6px",
+          right: "-18px",
+          zIndex: 1,
+        }}
+      />
+    </h1>
+  )
+}
+
 const Header: React.FC<{
   isStateInitialized: boolean
   openSetting: () => void
 }> = ({ isStateInitialized, openSetting }) => {
   return (
     <div className="flex flex-row items-center justify-between px-8 py-6">
-      <h1 className="text-2xl font-extrabold cursor-pointer uppercase">
-        Kapan Gajian?
-      </h1>
+      <Logo />
       <div className="flex flex-row items-center justify-between">
         <GithubButton />
         <div className="px-4" />
@@ -511,7 +531,7 @@ const DoneButton: React.FC<{
   return (
     <button
       onClick={onClick}
-      className="text-2xl cursor-pointer text-white bg-teal-600 px-10 py-1 rounded-full"
+      className="text-2xl cursor-pointer text-white bg-teal-600 px-10 py-1 rounded-md"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
