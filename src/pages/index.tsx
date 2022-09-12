@@ -286,7 +286,7 @@ const StatsWidget: React.FC<{
               `Tapi cuma perlu kerja ${stats.workdaysAhead} hari lagi!`}
           </div>
         ) : (
-          <div className="text-2xl uppercase font-extrabold">
+          <div className="text-5xl uppercase font-extrabold">
             Gajian masih lama...
           </div>
         )
@@ -537,9 +537,13 @@ const Home: NextPage = () => {
   const stateManager = useStateManager(state)
   const debug = useDebug()
   const verbose = useVerbose()
-  const [settingShown, setSettingShown] = React.useState<boolean>(
+  const [settingShown, setSettingShown] = React.useState(
     !stateManager.state?.payday
   )
+
+  React.useEffect(() => {
+    setSettingShown(!stateManager.state?.payday)
+  }, [stateManager.state?.payday])
 
   return (
     <>
