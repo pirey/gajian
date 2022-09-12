@@ -239,7 +239,7 @@ const StatsWidget: React.FC<{
           stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-5xl text-teal-600 font-extrabold uppercase">
+          <div className="text-2xl lg:text-5xl text-teal-600 font-extrabold uppercase">
             {showAltMessage ? (
               <>
                 Karena {stats.paydayOriginString} hari libur, jadi sekarang
@@ -256,7 +256,7 @@ const StatsWidget: React.FC<{
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-5xl text-teal-600 font-extrabold uppercase">
+          <div className="text-2xl lg:text-5xl text-teal-600 font-extrabold uppercase">
             {showAltMessage
               ? `Karena ${
                   stats.paydayOriginString
@@ -271,7 +271,7 @@ const StatsWidget: React.FC<{
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-5xl text-teal-600 font-extrabold uppercase">
+          <div className="text-2xl lg:text-5xl text-teal-600 font-extrabold uppercase">
             {showAltMessage &&
               `Karena ${stats.paydayOriginString} hari libur, gajian dimajukan hari ${stats.paydayActualString} di minggu depan!`}
             {!showAltMessage && `${stats.paydayActualString} depan gajian`}
@@ -280,19 +280,19 @@ const StatsWidget: React.FC<{
       }
       case stats.workdaysAhead > 0:
         return verbose ? (
-          <div className="text-5xl uppercase font-extrabold">
+          <div className="text-2xl lg:text-5xl uppercase font-extrabold">
             Gajian masih <strong>{stats.daysAhead}</strong> hari,{" "}
             {stats.daysAhead !== stats.workdaysAhead &&
               `Tapi cuma perlu kerja ${stats.workdaysAhead} hari lagi!`}
           </div>
         ) : (
-          <div className="text-5xl uppercase font-extrabold">
+          <div className="text-2xl lg:text-5xl uppercase font-extrabold">
             Gajian masih lama...
           </div>
         )
       default:
         return (
-          <div className="text-5xl text-red-600 font-extrabold">
+          <div className="text-2xl lg:text-5xl text-red-600 font-extrabold">
             {errorString()}
           </div>
         )
