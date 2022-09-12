@@ -471,8 +471,9 @@ const SettingButton: React.FC<{ className?: string; onClick: () => void }> = ({
 }
 
 const Header: React.FC<{
+  isStateInitialized: boolean
   openSetting: () => void
-}> = ({ openSetting }) => {
+}> = ({ isStateInitialized, openSetting }) => {
   return (
     <div className="flex flex-row items-center bg-teal-600 px-8 py-3">
       <h1 className="text-2xl text-white font-bold cursor-pointer uppercase">
@@ -481,7 +482,9 @@ const Header: React.FC<{
       <div className="px-4" />
       <GithubButton className="text-white" />
       <div className="px-2" />
-      <SettingButton className="text-white" onClick={openSetting} />
+      {isStateInitialized && (
+        <SettingButton className="text-white" onClick={openSetting} />
+      )}
     </div>
   )
 }
@@ -490,25 +493,25 @@ const SettingWidget: React.FC<{
   payday?: number
   setPayday: StateManager["setPayday"]
   closeSetting: () => void
-}> = ({ payday: initPayday, setPayday, closeSetting }) => {
+}> = ({ payday, setPayday, closeSetting }) => {
+  const allowSubmit = !!payday
   return (
     <div className="flex-grow flex flex-col items-center justify-center">
-      <InputWidget payday={initPayday} setPayday={setPayday} />
+      <InputWidget payday={payday} setPayday={setPayday} />
       <div className="pt-12" />
-      <DoneButton
-        className="text-2xl cursor-pointer text-white bg-teal-600 px-10 py-1 rounded"
-        onClick={closeSetting}
-      />
+      {allowSubmit && <DoneButton onClick={() => closeSetting()} />}
     </div>
   )
 }
 
-const DoneButton: React.FC<{ onClick: () => void; className?: string }> = ({
-  onClick,
-  className,
-}) => {
+const DoneButton: React.FC<{
+  onClick: () => void
+}> = ({ onClick }) => {
   return (
-    <button onClick={onClick} className={className}>
+    <button
+      onClick={onClick}
+      className="text-2xl cursor-pointer text-white bg-teal-600 px-10 py-1 rounded"
+    >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -534,7 +537,9 @@ const Home: NextPage = () => {
   const stateManager = useStateManager(state)
   const debug = useDebug()
   const verbose = useVerbose()
-  const [settingShown, setSettingShown] = React.useState<boolean>(false)
+  const [settingShown, setSettingShown] = React.useState<boolean>(
+    !stateManager.state?.payday
+  )
 
   return (
     <>
@@ -544,7 +549,10 @@ const Home: NextPage = () => {
       </Head>
 
       <Layout>
-        <Header openSetting={() => setSettingShown(!settingShown)} />
+        <Header
+          isStateInitialized={stateManager.isInitialized()}
+          openSetting={() => setSettingShown(!settingShown)}
+        />
         {!settingShown && stateManager.state?.payday && (
           <StatsWidget
             today={today}
