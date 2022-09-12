@@ -239,7 +239,7 @@ const StatsWidget: React.FC<{
           stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-md py-2 px-16 font-extrabold uppercase animate-gajian">
+          <div className="text-2xl lg:text-5xl text-white bg-teal-600  py-2 px-16 font-extrabold uppercase animate-gajian">
             {showAltMessage ? (
               <>
                 Karena {stats.paydayOriginString} hari libur, jadi sekarang
@@ -256,7 +256,7 @@ const StatsWidget: React.FC<{
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-md py-2 px-16  font-extrabold uppercase">
+          <div className="text-2xl lg:text-5xl text-white bg-teal-600  py-2 px-16  font-extrabold uppercase">
             {showAltMessage
               ? `Karena ${
                   stats.paydayOriginString
@@ -271,7 +271,7 @@ const StatsWidget: React.FC<{
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
         const showAltMessage = verbose && isAdvanced
         return (
-          <div className="text-2xl lg:text-5xl text-white bg-teal-600 rounded-md py-2 px-16  font-extrabold uppercase">
+          <div className="text-2xl lg:text-5xl text-white bg-teal-600  py-2 px-16  font-extrabold uppercase">
             {showAltMessage &&
               `Karena ${stats.paydayOriginString} hari libur, gajian dimajukan hari ${stats.paydayActualString} di minggu depan!`}
             {!showAltMessage && `${stats.paydayActualString} depan gajian`}
@@ -280,7 +280,7 @@ const StatsWidget: React.FC<{
       }
       case stats.workdaysAhead > 0:
         return (
-          <div className="text-2xl lg:text-5xl text-white bg-gray-400 rounded-3xl py-2 px-16 uppercase font-extrabold">
+          <div className="text-2xl lg:text-5xl text-white bg-gray-400 py-2 px-16 uppercase font-extrabold">
             {verbose ? (
               <>
                 Gajian masih <strong>{stats.daysAhead}</strong> hari,{" "}
@@ -362,7 +362,7 @@ const InputWidget: React.FC<{
     <div className="flex flex-col justify-center items-center">
       <div className="flex flex-row items-center justify-start">
         <div className="uppercase font-extrabold text-2xl">Tanggal Gajian:</div>
-        <div className="border-2 rounded radius ml-4 w-16">
+        <div className="border-2 rounded ml-4 w-16">
           <select
             className="w-full text-center font-bold"
             value={payday}
@@ -531,7 +531,7 @@ const DoneButton: React.FC<{
   return (
     <button
       onClick={onClick}
-      className="text-2xl cursor-pointer text-white bg-teal-600 px-10 py-1 rounded-md"
+      className="text-2xl cursor-pointer text-white bg-teal-600 px-10 py-1 "
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
