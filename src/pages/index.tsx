@@ -216,14 +216,15 @@ const calculateStats = (
 }
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <div className="">{children}</div>
+  return <div className="flex flex-col h-screen w-screen">{children}</div>
 }
 
 const StatsWidget: React.FC<{
   today: dayjs.Dayjs
   payday: number
+  verbose: boolean
   debug: boolean
-}> = ({ today, payday, debug = false }) => {
+}> = ({ today, payday, verbose = false, debug = false }) => {
   const stats = calculateStats(today, payday)
 
   const message = (() => {
@@ -232,51 +233,56 @@ const StatsWidget: React.FC<{
         const isAdvanced =
           !stats.isWeekendToday &&
           stats.paydayActualString !== stats.paydayOriginString
+        const showAltMessage = verbose && isAdvanced
         return (
           <div className="text-2xl text-teal-700 font-extrabold uppercase">
-            {isAdvanced && (
+            {showAltMessage ? (
               <>
                 Karena {stats.paydayOriginString} hari libur, jadi sekarang
                 sudah <div className="animate-gajian">Gajian</div>
               </>
+            ) : (
+              <div className="animate-gajian">Gajian</div>
             )}
-            {!isAdvanced && <div className="animate-gajian">Gajian</div>}
           </div>
         )
       }
       case stats.isPaydayOnThisWeek: {
         const isTomorrow = stats.daysAhead === 1
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
+        const showAltMessage = verbose && isAdvanced
         return (
           <div className="text-2xl text-teal-700 font-extrabold uppercase">
-            {isAdvanced &&
-              `Karena ${
-                stats.paydayOriginString
-              } hari libur, gajian dimajukan besok ${
-                isTomorrow ? "" : stats.paydayActualString
-              }`}
-            {!isAdvanced &&
-              `Besok ${isTomorrow ? "" : stats.paydayActualString} gajian`}
+            {showAltMessage
+              ? `Karena ${
+                  stats.paydayOriginString
+                } hari libur, gajian dimajukan besok ${
+                  isTomorrow ? "" : stats.paydayActualString
+                }`
+              : `Besok ${isTomorrow ? "" : stats.paydayActualString} gajian`}
           </div>
         )
       }
       case stats.isPaydayOnNextWeek: {
         const isAdvanced = stats.paydayActualString !== stats.paydayOriginString
+        const showAltMessage = verbose && isAdvanced
         return (
           <div className="text-2xl text-teal-700 font-extrabold uppercase">
-            {isAdvanced &&
+            {showAltMessage &&
               `Karena ${stats.paydayOriginString} hari libur, gajian dimajukan hari ${stats.paydayActualString} di minggu depan!`}
-            {!isAdvanced && `${stats.paydayActualString} depan gajian`}
+            {!showAltMessage && `${stats.paydayActualString} depan gajian`}
           </div>
         )
       }
       case stats.workdaysAhead > 0:
-        return (
+        return verbose ? (
           <div className="text-2xl uppercase font-extrabold">
             Gajian masih <strong>{stats.daysAhead}</strong> hari,{" "}
             {stats.daysAhead !== stats.workdaysAhead &&
               `Tapi cuma perlu kerja ${stats.workdaysAhead} hari lagi!`}
           </div>
+        ) : (
+          <div className="text-2xl uppercase font-extrabold">Masih lama...</div>
         )
       default:
         return (
@@ -287,11 +293,13 @@ const StatsWidget: React.FC<{
     }
   })()
   return (
-    <div className="p-8 flex flex-col items-center justify-center">
-      <div>
-        Sekarang hari <strong>{dayStringFromDate(today)}</strong> tanggal{" "}
-        <strong>{today.date()}</strong>
-      </div>
+    <div className="p-8 flex-grow flex flex-col items-center justify-center">
+      {verbose && (
+        <div>
+          Sekarang hari <strong>{dayStringFromDate(today)}</strong> tanggal{" "}
+          <strong>{today.date()}</strong>
+        </div>
+      )}
       <div className="text-center">{message}</div>
       {debug && (
         <pre className="text-left mt-12">{JSON.stringify(stats, null, 4)}</pre>
@@ -345,7 +353,9 @@ const InputWidget: React.FC<{
   return (
     <div className="flex flex-col justify-center items-center bg-teal-600 p-8">
       <div className="flex flex-row items-center justify-start">
-        <div className="uppercase font-extrabold text-2xl text-white">Tanggal Gajian:</div>
+        <div className="uppercase font-extrabold text-2xl text-white">
+          Tanggal Gajian:
+        </div>
         <div className="border-2 rounded radius ml-4 w-16">
           <select
             className="w-full text-center font-bold"
@@ -392,12 +402,22 @@ const useDebug = () => {
   return debug
 }
 
+const useVerbose = () => {
+  const [verbose, setVerbose] = React.useState(false)
+  React.useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search)
+    setVerbose(queryParams.has("verbose"))
+  }, [])
+  return verbose
+}
+
 const Home: NextPage = () => {
   // const today = React.useMemo(() => dayjs().date(5), [])
   const today = React.useMemo(() => dayjs(), [])
   const state = useLoadedState()
   const stateManager = useStateManager(state)
   const debug = useDebug()
+  const verbose = useVerbose()
 
   return (
     <>
@@ -415,6 +435,7 @@ const Home: NextPage = () => {
           <StatsWidget
             today={today}
             payday={stateManager.state.payday}
+            verbose={verbose}
             debug={debug}
           />
         )}
